@@ -1,12 +1,8 @@
-"""fMess icon: a flat speech-bubble ring with an f inside, on graphite,
-drawn per size: a little light on the edges when large, plain and sharper
-when small, as Apple's own icons are.
+"""fMess icon: a speech bubble in the pink-violet-blue gradient with a white,
+round-stroked f, on a light tile, drawn per size: soft shadows when large,
+a bigger bubble and bolder f with no shadows when small, as Apple's own icons are.
 
-    python3 branding/icon.py OUT_DIR [STYLE]   # icon-16.svg ... icon-1024.svg
-
-STYLE: groove (the ring a groove pressed into the icon, faintly tinted with the
-gradient, white f), mono (ring and f in one gradient), white (white ring,
-gradient f) or inverse (gradient ring, white f).
+    python3 branding/icon.py OUT_DIR   # icon-16.svg ... icon-1024.svg
 
 Render each SVG at its own size (Chrome headless keeps the transparency:
 --headless=new --force-device-scale-factor=1 --default-background-color=00000000
@@ -14,6 +10,11 @@ Render each SVG at its own size (Chrome headless keeps the transparency:
 and run `npx tauri icon app-icon.png` for the Windows and Linux icons, then
 replace icon.icns (iconutil -c icns on an .iconset of the per-size PNGs) and
 32x32, 64x64, 128x128 and 128x128@2x.png with the per-size renders.
+
+    python3 branding/icon.py --site OUT_DIR   # mark-128.svg, favicon-32.svg ...
+
+The website's copies (site/assets/): the tile alone, cropped to its edges, for
+the header mark and the favicons; icon-256 and icon-512 are the app's renders.
 
     python3 branding/icon.py --themes OUT_DIR   # zalo-256.svg ... whatsapp-512.svg
 
@@ -32,87 +33,49 @@ def superellipse(cx, cy, w, h, n, steps=720):
     return "M" + " L".join(pts) + " Z"
 
 SQUIRCLE = superellipse(512, 512, 824, 824, 5.0)
-CX, CY, BW, BH, N = 512, 476, 640, 470, 2.7
+CX, CY = 512, 488
 
-def bubble(ring):
-    outer = superellipse(CX, CY, BW, BH, N)
-    inner = superellipse(CX, CY, BW - 2 * ring, BH - 2 * ring, N)
-    bottom = CY + BH / 2
-    tail = f"M{CX-44},{bottom-40} L{CX+66},{bottom-40} L{CX-40},{bottom+96} Z"
-    return outer, inner, tail
+def bubble(w, h):
+    """A soft squircle with a tail curling out of its bottom left."""
+    bottom = CY + h / 2
+    tail = (f"M{CX-200},{bottom-90} C{CX-210},{bottom+20} {CX-250},{bottom+70} {CX-290},{bottom+95} "
+            f"C{CX-190},{bottom+100} {CX-110},{bottom+60} {CX-60},{bottom-20} Z")
+    return superellipse(CX, CY, w, h, 2.6), tail
 
-F_STEM = "M-21,154 V-18 C-21,-74 9,-100 61,-100 H90"
-F_BAR = "M-89,10 H51"
+# The f, about the bubble's centre: a stem curling over at the top, and a bar.
+F_STEM = "M-20,170 V-10 C-20,-80 15,-115 75,-115 H105"
+F_BAR = "M-95,15 H65"
 # One gradient across the whole drawing, top left to bottom right.
-INK = [("0", "#FF5FAE"), ("0.5", "#A65BFF"), ("1", "#4C9CFF")]
-INK_FROM, INK_TO = (250, 240), (780, 800)
+INK = [("0", "#FF4FA3"), ("0.5", "#9D4DFF"), ("1", "#2E8BFF")]
+INK_FROM, INK_TO = (150, 120), (874, 904)
 
 def gradient(id_, a, b):
     stops = "".join(f'<stop offset="{o}" stop-color="{c}"/>' for o, c in INK)
     return f'<linearGradient id="{id_}" gradientUnits="userSpaceOnUse" x1="{a[0]:.1f}" y1="{a[1]:.1f}" x2="{b[0]:.1f}" y2="{b[1]:.1f}">{stops}</linearGradient>'
 
-def svg(size, style, tint=0.18):
+def svg(size, crop=False):
     small = size <= 32
-    large = size >= 256
-    ring = 70 if small else 62
-    scale = 1.04 if small else 0.93
-    stem, bar = (104, 92) if small else (92, 80)
-    outer, inner, tail = bubble(ring)
-    fy = CY - 2
-    # The f is drawn scaled about its own origin, so its gradient is given in those units.
-    local = lambda p: ((p[0] - CX) / scale, (p[1] - fy) / scale)
-    ring_fill = {"groove": "#34343C", "mono": "url(#ink)", "white": "url(#white)", "inverse": "url(#ink)"}[style]
-    f_stroke = {"groove": "#FFFFFF", "mono": "url(#inklocal)", "white": "url(#inklocal)", "inverse": "#FFFFFF"}[style]
-    edge = "" if small else 'filter="url(#edge)"'
-    if style == "groove":
-        # Small icons can't show the shading, so their groove is a little lighter.
-        ring_tint = f'<rect width="1024" height="1024" fill="url(#ink)" opacity="{tint + (0.12 if small else 0)}" mask="url(#bubble)"/>'
-        ring_filter = "" if small else 'filter="url(#groove)"'
-    else:
-        ring_tint, ring_filter = "", edge
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 1024 1024">
+    w, h = (660, 580) if small else (600, 520)
+    stem, bar = (104, 96) if small else (88, 80)
+    shape, tail = bubble(w, h)
+    # Cropped to the tile for the website, where nothing frames it.
+    box = "100 100 824 824" if crop else "0 0 1024 1024"
+    tile_shadow = "" if crop else 'filter="url(#iconshadow)"'
+    bubble_shadow = "" if small else 'filter="url(#bubbleshadow)"'
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="{box}">
 <defs>
-  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B2B31"/><stop offset="1" stop-color="#141417"/></linearGradient>
-  <radialGradient id="toplight" cx="0.5" cy="-0.1" r="0.8"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.09"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
-  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#9B5CFF" stop-opacity="0.22"/><stop offset="1" stop-color="#9B5CFF" stop-opacity="0"/></radialGradient>
-  <linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="0" y1="100" x2="0" y2="924"><stop offset="0" stop-color="#fff" stop-opacity="0.26"/><stop offset="0.3" stop-color="#fff" stop-opacity="0.05"/><stop offset="1" stop-color="#fff" stop-opacity="0.10"/></linearGradient>
-  <linearGradient id="white" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FAFAFC"/><stop offset="1" stop-color="#DCDCE4"/></linearGradient>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#ECECF2"/></linearGradient>
   {gradient("ink", INK_FROM, INK_TO)}
-  {gradient("inklocal", local(INK_FROM), local(INK_TO))}
   <clipPath id="body"><path d="{SQUIRCLE}"/></clipPath>
-  <mask id="bubble" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-    <path d="{outer}" fill="#fff"/>
-    <path d="{tail}" fill="#fff" stroke="#fff" stroke-width="26" stroke-linejoin="round"/>
-    <path d="{inner}" fill="#000"/>
-  </mask>
-  <filter id="iconshadow" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><feDropShadow dx="0" dy="8" stdDeviation="{8 if large else 5}" flood-color="#000" flood-opacity="0.35"/></filter>
-  <!-- A thin band of light inside the top edges, Tahoe's only depth cue. -->
-  <filter id="edge" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-    <feOffset in="SourceAlpha" dy="5" result="o"/><feGaussianBlur in="o" stdDeviation="2.5" result="b"/>
-    <feComposite in="SourceAlpha" in2="b" operator="out" result="band"/>
-    <feFlood flood-color="#FFFFFF" flood-opacity="0.45"/><feComposite in2="band" operator="in" result="light"/>
-    <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="light"/></feMerge></filter>
-  <!-- Pressed in: shade under the top edges, a little light along the bottom ones. -->
-  <filter id="groove" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-    <feOffset in="SourceAlpha" dy="12" result="down"/><feGaussianBlur in="down" stdDeviation="7" result="downBlur"/>
-    <feComposite in="SourceAlpha" in2="downBlur" operator="out" result="topBand"/>
-    <feFlood flood-color="#000000" flood-opacity="0.62"/><feComposite in2="topBand" operator="in" result="shade"/>
-    <feOffset in="SourceAlpha" dy="-6" result="up"/><feGaussianBlur in="up" stdDeviation="3" result="upBlur"/>
-    <feComposite in="SourceAlpha" in2="upBlur" operator="out" result="bottomBand"/>
-    <feFlood flood-color="#FFFFFF" flood-opacity="0.16"/><feComposite in2="bottomBand" operator="in" result="lip"/>
-    <feMerge result="pressed"><feMergeNode in="SourceGraphic"/><feMergeNode in="shade"/><feMergeNode in="lip"/></feMerge>
-    <feGaussianBlur in="pressed" stdDeviation="1.2"/></filter>
+  <filter id="iconshadow" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><feDropShadow dx="0" dy="10" stdDeviation="{10 if size >= 256 else 6}" flood-color="#000" flood-opacity="0.3"/></filter>
+  <filter id="bubbleshadow" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#2A0A5E" flood-opacity="0.35"/></filter>
 </defs>
-<g filter="url(#iconshadow)"><path d="{SQUIRCLE}" fill="url(#bg)"/></g>
-<g clip-path="url(#body)">
-  <rect width="1024" height="1024" fill="url(#toplight)"/>
-  {'' if small else f'<ellipse cx="{CX}" cy="{CY}" rx="300" ry="230" fill="url(#glow)"/>'}
-  <path d="{SQUIRCLE}" fill="none" stroke="url(#rim)" stroke-width="{6 if large else 10}"/>
-</g>
-<g {ring_filter}><rect width="1024" height="1024" fill="{ring_fill}" mask="url(#bubble)"/>{ring_tint}</g>
-<g {edge}><g transform="translate({CX},{fy}) scale({scale})" fill="none" stroke="{f_stroke}" stroke-linecap="butt" stroke-linejoin="round">
+<g {tile_shadow}><path d="{SQUIRCLE}" fill="url(#bg)"/></g>
+<path d="{SQUIRCLE}" fill="none" stroke="#000" stroke-opacity="0.08" stroke-width="{12 if small else 4}" clip-path="url(#body)"/>
+<g {bubble_shadow}><path d="{shape}" fill="url(#ink)"/><path d="{tail}" fill="url(#ink)"/></g>
+<g transform="translate({CX},{CY})" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
   <path d="{F_STEM}" stroke-width="{stem}"/><path d="{F_BAR}" stroke-width="{bar}"/>
-</g></g>
+</g>
 </svg>'''
 
 BRANDS = pathlib.Path(__file__).parent / "brands"
@@ -141,7 +104,7 @@ def brand(name):
 
 def themed(size, name):
     """A brand's logo with fMess's icon as a badge on its bottom right corner."""
-    badge = inner(svg(64, "groove"))
+    badge = inner(svg(64))
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 1024 1024">
 <defs>
   <filter id="logoshadow" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/></filter>
@@ -158,7 +121,11 @@ if __name__ == "__main__":
             for size in (256, 512):
                 (out / f"{name}-{size}.svg").write_text(themed(size, name))
         sys.exit()
+    if sys.argv[1] == "--site":
+        out = pathlib.Path(sys.argv[2])
+        for name, size in (("mark-128", 128), ("favicon-32", 32), ("favicon-64", 64)):
+            (out / f"{name}.svg").write_text(svg(size, crop=True))
+        sys.exit()
     out = pathlib.Path(sys.argv[1])
-    style = sys.argv[2] if len(sys.argv) > 2 else "groove"
     for size in (16, 32, 64, 128, 256, 512, 1024):
-        (out / f"icon-{size}.svg").write_text(svg(size, style))
+        (out / f"icon-{size}.svg").write_text(svg(size))
