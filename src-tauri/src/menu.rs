@@ -5,7 +5,7 @@ use tauri::{
 };
 
 use crate::{
-    about, settings, show_main_window, update,
+    about, settings, show_main_window,
     webview::{self, messages_url},
     MAIN_WINDOW,
 };
@@ -25,7 +25,6 @@ const ZOOM_IN: &str = "zoom-in";
 const ZOOM_OUT: &str = "zoom-out";
 const ZOOM_RESET: &str = "zoom-reset";
 const ABOUT: &str = "about";
-const CHECK_FOR_UPDATES: &str = "check-for-updates";
 const QUIT: &str = "quit";
 
 pub fn install<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
@@ -36,7 +35,6 @@ pub fn install<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
             &MenuItem::with_id(app, MESSAGES, "Open Chats", true, None::<&str>)?,
             &MenuItem::with_id(app, RELOAD, "Reload", true, None::<&str>)?,
             &MenuItem::with_id(app, SETTINGS, "Settings…", true, None::<&str>)?,
-            &MenuItem::with_id(app, CHECK_FOR_UPDATES, "Check for Updates…", true, None::<&str>)?,
             &MenuItem::with_id(app, ABOUT, "About fMess", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, QUIT, "Quit fMess", true, None::<&str>)?,
@@ -75,22 +73,16 @@ fn app_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 
     let menu = Menu::default(app)?;
     // The first submenu is the app menu. Its About fMess becomes fMess's own
-    // (with credits), followed by Check for Updates…, a separator and Settings.
+    // (with credits), followed by a separator and Settings.
     if let Some(app_menu) = menu.items()?.first().and_then(|item| item.as_submenu()) {
         app_menu.remove_at(0)?;
-        app_menu.insert_items(
-            &[
-                &MenuItem::with_id(app, ABOUT, "About fMess", true, None::<&str>)?,
-                &MenuItem::with_id(app, CHECK_FOR_UPDATES, "Check for Updates…", true, None::<&str>)?,
-            ],
-            0,
-        )?;
+        app_menu.insert(&MenuItem::with_id(app, ABOUT, "About fMess", true, None::<&str>)?, 0)?;
         app_menu.insert_items(
             &[
                 &MenuItem::with_id(app, SETTINGS, "Settings…", true, Some("CmdOrCtrl+,"))?,
                 &PredefinedMenuItem::separator(app)?,
             ],
-            3,
+            2,
         )?;
     }
     let go = Submenu::with_items(
@@ -205,7 +197,6 @@ fn run<R: Runtime>(app: &AppHandle<R>, id: &str) {
         }
         SETTINGS => webview::open_settings_window(app),
         ABOUT => about::show(app),
-        CHECK_FOR_UPDATES => update::check_now(app),
         ZOOM_IN => settings::zoom_by(app, 1),
         ZOOM_OUT => settings::zoom_by(app, -1),
         ZOOM_RESET => settings::zoom_by(app, 0),

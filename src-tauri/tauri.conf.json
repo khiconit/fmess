@@ -30,16 +30,5 @@
       "entitlements": "Entitlements.plist",
       "minimumSystemVersion": "12.0"
     }
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVGMTBBQzY2MDZBQjIxMEQKUldRTklhc0dacXdRWC9jV3BuTHBCNWpkY1dleU1OaWFST0hBQlcxdnl1NUdobHRsMzBteTdCZHMK",
-      "endpoints": [
-        "https://github.com/toanbku/fmess/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
   }
 }

@@ -11,7 +11,6 @@ mod notify;
 mod probe;
 mod settings;
 mod themes;
-mod update;
 mod webview;
 #[cfg(windows)]
 mod webview2;
@@ -47,7 +46,6 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             notify::notify,
             notify::clear_notifications,
@@ -78,7 +76,6 @@ fn main() {
             menu::install(handle)?;
             icon::apply(handle);
             notify::route_clicks(handle)?;
-            update::check_in_background(handle);
             #[cfg(debug_assertions)]
             probe::run(handle.clone());
             Ok(())
